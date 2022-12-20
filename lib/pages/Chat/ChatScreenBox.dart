@@ -1,30 +1,24 @@
-
-import 'package:chatk/pages/CallScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:emoji_picker_2/emoji_picker_2.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+import '../callScreen/HomeCallScreen.dart';
 
 final _firestore = FirebaseFirestore.instance;
-late User signedInUser ;
-
+late User signedInUser;
+late Timestamp chattime;
 class ChatScreenBox extends StatefulWidget {
-
   @override
   State<ChatScreenBox> createState() => _ChatScreenBox();
-
 }
 
 class _ChatScreenBox extends State<ChatScreenBox> {
-  Timestamp? chattime;
   final messageTextController = TextEditingController();
   ScrollController _scrollController = ScrollController();
 
   final _auth = FirebaseAuth.instance;
-
-
 
   String? messagetext;
   bool show = false;
@@ -39,22 +33,20 @@ class _ChatScreenBox extends State<ChatScreenBox> {
   //   print(message.data());}
   // }
 
-  void messagesStreams()async {
-   await for(var snapshot in  _firestore.collection('messages').snapshots()){
-     for(var message in snapshot.docs){
-       print(message.data());
-
-     }
-
-   }
+  void messagesStreams() async {
+    await for (var snapshot in _firestore.collection('messages').snapshots()) {
+      for (var message in snapshot.docs) {
+        print(message.data());
+      }
+    }
   }
 
   @override
   void initState() {
-
     super.initState();
     getCurrentUser();
   }
+
   void getCurrentUser() {
     try {
       final user = _auth.currentUser;
@@ -69,7 +61,8 @@ class _ChatScreenBox extends State<ChatScreenBox> {
 
   @override
   Widget build(BuildContext context) {
-  return Scaffold(
+
+    return Scaffold(
       backgroundColor: Colors.grey[800],
       appBar: AppBar(
         centerTitle: true,
@@ -98,8 +91,8 @@ class _ChatScreenBox extends State<ChatScreenBox> {
                 color: Colors.blue,
               ),
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context)=>CallScreen()));
-
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => HomeCallScreen()));
               }),
           SizedBox(
             width: 10,
@@ -125,7 +118,7 @@ class _ChatScreenBox extends State<ChatScreenBox> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-             MessageStreamBuilder(),
+              MessageStreamBuilder(),
               Container(
                 decoration: BoxDecoration(
                     border:
@@ -156,7 +149,6 @@ class _ChatScreenBox extends State<ChatScreenBox> {
                                     maxLines: 5,
                                     minLines: 1,
                                     onChanged: (value) {
-
                                       messagetext = value;
                                       // if (value.length > 0) {
                                       //   setState(() {
@@ -169,10 +161,8 @@ class _ChatScreenBox extends State<ChatScreenBox> {
                                       // }
                                     },
                                     decoration: InputDecoration(
-
                                       border: InputBorder.none,
                                       hintText: "Type a message",
-
                                       hintStyle: TextStyle(color: Colors.grey),
                                       prefixIcon: IconButton(
                                         icon: Icon(
@@ -181,7 +171,6 @@ class _ChatScreenBox extends State<ChatScreenBox> {
                                               : Icons.emoji_emotions_outlined,
                                         ),
                                         onPressed: () {
-
                                           if (!show) {
                                             focusNode.unfocus();
                                             focusNode.canRequestFocus = false;
@@ -232,39 +221,35 @@ class _ChatScreenBox extends State<ChatScreenBox> {
                                   radius: 25,
                                   backgroundColor: Colors.blue,
                                   child: IconButton(
-                                    icon: Icon(
-                                      sendButton ? Icons.send  : Icons.mic,
-                                      color: Colors.white,
-                                    ),
-                                    onPressed: () {
-                                      messageTextController.clear();
-                                      _firestore.collection("messages").add({
-                                        'text': messagetext,
-                                        'sender':signedInUser.email,
-                                        'senderId':signedInUser.uid,
-                                        'time':DateTime.now()
-                                      });
-                                           if (sendButton) {
-                                      _scrollController.animateTo(
-                                      _scrollController
-                                          .position.maxScrollExtent,
-                                      duration:
-                                      Duration(milliseconds: 300),
-                                      curve: Curves.easeOut);
-
-
-                                      setState(() {
-                                      sendButton = false;
-                                      });
-
-                                        setState(() {
-                                          sendButton = false;
+                                      icon: Icon(
+                                        sendButton ? Icons.send : Icons.mic,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        messageTextController.clear();
+                                        _firestore.collection("messages").add({
+                                          'text': messagetext,
+                                          'sender': signedInUser.email,
+                                          'senderId': signedInUser.uid,
+                                          'time': DateTime.now()
                                         });
+                                        if (sendButton) {
+                                          _scrollController.animateTo(
+                                              _scrollController
+                                                  .position.maxScrollExtent,
+                                              duration:
+                                                  Duration(milliseconds: 300),
+                                              curve: Curves.easeOut);
 
-                                    }
-                                    }
+                                          setState(() {
+                                            sendButton = false;
+                                          });
 
-                                  ),
+                                          setState(() {
+                                            sendButton = false;
+                                          });
+                                        }
+                                      }),
                                 ),
                               ),
                             ],
@@ -384,176 +369,122 @@ class _ChatScreenBox extends State<ChatScreenBox> {
           });
         });
   }
-
 }
 
-class MessageStreamBuilder extends StatelessWidget{
+class MessageStreamBuilder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
- return  StreamBuilder<QuerySnapshot>(
-     stream:_firestore.collection('messages').where("senderId",isEqualTo:signedInUser.uid).snapshots() ,
-     builder:(context,Snapshot){
-       List<MessageLine>messagesWidgets = [];
+    return StreamBuilder<QuerySnapshot>(
+        stream: _firestore
+            .collection('messages')
+            .where("senderId", isEqualTo: signedInUser.uid)
+            .snapshots(),
+        builder: (context, Snapshot) {
+          List<MessageLine> messagesWidgets = [];
+          if (!Snapshot.hasData) {
+            //spinner
+            return Center(
+              child: CircularProgressIndicator(
+                backgroundColor: Colors.blue,
+              ),
+            );
+          }
+          final messages = Snapshot.data!.docs;
+          for (var message in messages) {
+            final messageText = message.get('text');
+            final messageSender = message.get('sender');
+            final currentyUser = signedInUser.email;
+            chattime = message.get("time");
 
-       if(!Snapshot .hasData){
-         //spinner
-         return Center(
-           child: CircularProgressIndicator(
-             backgroundColor: Colors.blue,
-           ),
-         );
-       }
-       final messages = Snapshot.data!.docs;
-       for(var message in messages){
-         final messageText = message.get('text');
-         final messageSender = message.get('sender');
-         final currentyUser = signedInUser.email;
-             final  chattime= message.get("time");
-
-
-         // if(currentyUser == messageSender){
-         //   // this code of the message from the signed in user
-         // }
-         final messageWidget = MessageLine(sender: messageSender,
-           text: messageText,
-         isMe:currentyUser ==messageSender ,);
-         messagesWidgets.add(messageWidget);
-       }
-       return Expanded(
-         child: ListView(
-           padding: EdgeInsets.symmetric(horizontal: 10,vertical: 20),
-           children: messagesWidgets,
-         ),
-       );
-     }
- );
+            // if(currentyUser == messageSender){
+            //   // this code of the message from the signed in user
+            // }
+            final messageWidget = MessageLine(
+              sender: messageSender,
+              text: messageText,
+              isMe: currentyUser == messageSender,
+              time: chattime,
+            );
+            messagesWidgets.add(messageWidget);
+          }
+          return Expanded(
+            child: ListView(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+              children: messagesWidgets,
+            ),
+          );
+        });
   }
 }
-class MessageLine extends StatelessWidget{
-const  MessageLine({this.text,this.sender,
-  this.image_url,required this.isMe,this.senderId,
-this.time,
-});
+
+class MessageLine extends StatelessWidget {
+  const MessageLine({
+    this.text,
+    this.sender,
+    this.image_url,
+    required this.isMe,
+    this.senderId,
+    required this.time,
+  });
 
   final String? sender;
   final String? senderId;
   final String? text;
   final String? image_url;
-  final DateTime? time;
+  final Timestamp time;
 
- final bool isMe;
+  final bool isMe;
+
   @override
   Widget build(BuildContext context) {
-    return
-        Padding(
-          padding: const EdgeInsets.all(10.0),
-          child: Column(
-            crossAxisAlignment:isMe? CrossAxisAlignment.end :CrossAxisAlignment.start,
-            children: [
-              // Row(
-              //   children:[
-              //     Container(
-              //       child: CircleAvatar(
-              //       backgroundImage:isMe? AssetImage(""):AssetImage("$image_url"),
-              //       radius: 20,
-              //
-              //     ),
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: Column(
+        crossAxisAlignment:
+            isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          // Row(
+          //   children:[
+          //     Container(
+          //       child: CircleAvatar(
+          //       backgroundImage:isMe? AssetImage(""):AssetImage("$image_url"),
+          //       radius: 20,
+          //
+          //     ),
 
-
-                  // ),
-                // ],
-              // ),
-              Material(
-                elevation: 5.0,
-                borderRadius:isMe? BorderRadius.only(topLeft: Radius.circular(30),
-                bottomLeft: Radius.circular(30),
-                topRight: Radius.circular(30))
-                    :BorderRadius.only(topLeft: Radius.circular(30),
+          // ),
+          // ],
+          // ),
+          Material(
+            elevation: 5.0,
+            borderRadius: isMe
+                ? BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    bottomLeft: Radius.circular(30),
+                    topRight: Radius.circular(30))
+                : BorderRadius.only(
+                    topLeft: Radius.circular(30),
                     bottomRight: Radius.circular(30),
                     topRight: Radius.circular(30)),
-                color: isMe ?  Colors.blue :   Colors.grey[500],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10.0,horizontal: 20),
-                  child: Column(
-                    children: [
-                      Text("$text ${time}"
-                        ,style: TextStyle(fontSize: 12,color:isMe? Colors.white24:Colors.grey)),
-                        Text(  timeago.format(time.to()),style: TextStyle(color: Colors.pink[200],)),
-
-                    ],
-                  ),
+            color: isMe ? Colors.blue : Colors.grey[500],
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 10.0, horizontal: 20),
+              child: Column(
+                children: [
+                  Text("$text ${time}",
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: isMe ? Colors.white24 : Colors.grey[300])),
+                   Text(  timeago.format(time.toDate()),style: TextStyle(color: Colors.white24,)),
+                ],
               ),
-              )],
-          ),
-        );
-
+            ),
+          )
+        ],
+      ),
+    );
   }
-
 }
 
-
-
-//   child: Row(
-//     crossAxisAlignment: CrossAxisAlignment.center,
-//     children: [
-//       Expanded(child:
-//       Container(
-//         padding: EdgeInsets.all(10),
-//         child: TextField(
-//
-//
-//           onChanged: (value){
-//      },
-//
-//             decoration: const InputDecoration(
-//
-//               border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(20)
-//               ),),
-//               // enabledBorder:OutlineInputBorder(
-//               //   borderSide: BorderSide(
-//               //     color: Colors.grey,
-//               //     width: 1,
-//
-//                 // ),
-//
-//                 // borderRadius: BorderRadius.all(Radius.circular(20)
-//                 // ),
-//
-//               // ),
-//
-//               // labelText: "UserEmail", //babel text
-//               hintText: "Type your message",
-//               contentPadding:EdgeInsets.symmetric(vertical: 1,horizontal: 5),
-//               //hint text
-//               prefixIcon: Icon(Icons.emoji_emotions_outlined,),
-//                 suffix: Icon(Icons.camera_alt,color: Colors.blue,),
-//                 suffixIcon: Icon(Icons.keyboard_voice_outlined,color: Colors.blue,),
-//
-//
-//               hintStyle: TextStyle(
-//                   fontSize: 18, fontWeight: FontWeight.bold,color:Colors.white),
-//               //hint text style
-//             ),
-//
-//           ),
-//       ),
-//
-//       ),
-//
-//      // (onPressed: (){
-//      //   _firestore.collection("messages").add({
-//      //     "text":messagetext,
-//      //     'sender':signedInUser.email,
-//      //   });
-//
-//      //},
-//     ],
-//   ),
-// )
-//        )],
-//     ),
-//   ),
-// ),
-//  );
-// }
 

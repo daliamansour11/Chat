@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 
 import 'CameraView.dart';
-import 'VedioView.dart';
 List<CameraDescription> cameras =[];
 class CameraScreen extends StatefulWidget {
   CameraScreen({Key? key}) : super(key: key);
